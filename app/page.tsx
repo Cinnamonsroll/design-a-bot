@@ -54,9 +54,9 @@ export default function Component() {
   const selectRandomTeam = () => {
     setIsSpinningTeam(true);
     setTimeout(() => {
-      const randomTeam = Math.floor(Math.random() * totalTeams) + 1;
-      setSelectedTeam(randomTeam);
+      const randomTeam = ~~(Math.random() * totalTeams) + 1;
       setIsSpinningTeam(false);
+      setSelectedTeam(randomTeam);
       if (selectedGame) {
         setSelections([...selections, { game: selectedGame, team: randomTeam }]);
       }
