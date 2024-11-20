@@ -28,7 +28,6 @@ export default function Component() {
   );
   const [hasMounted, setHasMounted] = useState(false);
 
-
   useEffect(() => {
     setHasMounted(true);
   }, []);
