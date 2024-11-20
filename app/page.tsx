@@ -58,7 +58,7 @@ export default function Component() {
       setSelectedTeam(randomTeam);
       setIsSpinningTeam(false);
       if (selectedGame) {
-        setSelections([...selections, { game: selectedGame, team: randomTeam }]);
+        setSelections([...selections, { game: selectedGame, team: selectedTeam }]);
       }
     }, 2000);
   };
