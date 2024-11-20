@@ -1,101 +1,219 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import useLocalStorage from "@/app/hooks/useLocalStorage";
+import { gameData } from "@/app/constants";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+export default function Component() {
+  const [selectedGame, setSelectedGame] = useLocalStorage<
+    { year: number; name: string } | null
+  >("selectedGame", null);
+  const [selectedTeam, setSelectedTeam] = useLocalStorage<number | null>(
+    "selectedTeam",
+    null
   );
+  const [availableGames, setAvailableGames] = useLocalStorage<
+    { year: number; name: string }[]
+  >("availableGames", [...gameData]);
+  const [isSpinningGame, setIsSpinningGame] = useState(false);
+  const [isSpinningTeam, setIsSpinningTeam] = useState(false);
+  const [selections, setSelections] = useLocalStorage<
+    Array<{ game: { year: number; name: string }; team: number }>
+  >("selections", []);
+  const [totalTeams, setTotalTeams] = useLocalStorage<number>(
+    "totalTeams",
+    20
+  );
+  const [hasMounted, setHasMounted] = useState(false);
+
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hasMounted) return;
+    if (availableGames.length === 0) {
+      setAvailableGames([...gameData]);
+    }
+  }, [hasMounted, availableGames.length, setAvailableGames]);
+
+  const selectRandomGame = () => {
+    if (availableGames.length === 0) return;
+    setIsSpinningGame(true);
+    setTimeout(() => {
+      const randomIndex = ~~(Math.random() * availableGames.length);
+      const game = availableGames[randomIndex];
+      setSelectedGame(game);
+      setAvailableGames(availableGames.filter((g: {year: number, name: string}) => g.year !== game.year));
+      setIsSpinningGame(false);
+    }, 2000);
+  };
+
+  const selectRandomTeam = () => {
+    setIsSpinningTeam(true);
+    setTimeout(() => {
+      const randomTeam = Math.floor(Math.random() * totalTeams) + 1;
+      setSelectedTeam(randomTeam);
+      setIsSpinningTeam(false);
+      if (selectedGame) {
+        setSelections([...selections, { game: selectedGame, team: randomTeam }]);
+      }
+    }, 2000);
+  };
+
+  useEffect(() => {
+    if (isSpinningGame) {
+      const interval = setInterval(() => {
+        setSelectedGame(
+          availableGames[Math.floor(Math.random() * availableGames.length)]
+        );
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isSpinningGame, availableGames]);
+
+  useEffect(() => {
+    if (isSpinningTeam) {
+      const interval = setInterval(() => {
+        setSelectedTeam(Math.floor(Math.random() * totalTeams) + 1);
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isSpinningTeam, totalTeams]);
+
+  const handleTotalTeamsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    setTotalTeams(isNaN(value) || value < 1 ? 1 : value);
+  };
+
+  if (!hasMounted) {
+    return null; 
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-start p-4 relative text-black">
+      <div className="absolute top-4 right-4 flex items-center gap-4">
+        <div>
+          <label htmlFor="totalTeams" className="block text-sm font-medium text-gray-700 mb-1">
+            Total Teams:
+          </label>
+          <input
+            type="number"
+            id="totalTeams"
+            value={totalTeams}
+            onChange={handleTotalTeamsChange}
+            className="w-24 px-2 py-1 text-black text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            min="1"
+          />
+        </div>
+      </div>
+
+      <h1 className="text-4xl font-bold mb-8 text-blue-600">FRC Game and Team Selector</h1>
+      
+      <div className="flex flex-col md:flex-row gap-8 mb-8 w-full max-w-4xl">
+        <div className="bg-white rounded-lg shadow-lg p-6 flex-1">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Random Game Selector</h2>
+          <div className="flex flex-col items-center justify-center mb-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedGame?.year || 'empty'}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="text-6xl font-bold text-blue-500 mb-2"
+              >
+                {selectedGame?.year || '????'}
+              </motion.div>
+            </AnimatePresence>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedGame?.name || 'empty'}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="text-2xl font-semibold text-blue-400 text-center"
+              >
+                {selectedGame?.name || 'Game Name'}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <button
+            onClick={selectRandomGame}
+            disabled={isSpinningGame || availableGames.length === 0}
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300 disabled:bg-gray-400"
+          >
+            {isSpinningGame ? 'Selecting...' : 'Get Random Game'}
+          </button>
+          <p className="mt-2 text-sm text-gray-600 text-center">
+            {availableGames.length} games remaining
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-6 flex-1">
+          <h2 className="text-2xl font-semibold mb-4 text-center">Random Team Selector</h2>
+          <div className="flex flex-col items-center justify-center mb-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedTeam || 'empty'}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="text-6xl font-bold text-green-500 mb-2"
+              >
+                {selectedTeam || '????'}
+              </motion.div>
+            </AnimatePresence>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedGame?.name || 'empty'}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className="text-2xl font-semibold text-green-400 text-center"
+              >
+                {selectedGame?.name || 'Select a game first'}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          <button
+            onClick={selectRandomTeam}
+            disabled={isSpinningTeam || !selectedGame}
+            className="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition duration-300 disabled:bg-gray-400"
+          >
+            {isSpinningTeam ? 'Selecting...' : 'Get Random Team'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
+        <h2 className="text-2xl font-semibold mb-4 text-center">Selected Games and Teams</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="py-2 px-4 border-b">Year</th>
+                <th className="py-2 px-4 border-b">Game Name</th>
+                <th className="py-2 px-4 border-b">Team Number</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selections.map((selection, index) => (
+                <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                  <td className="py-2 px-4 border-b">{selection.game.year}</td>
+                  <td className="py-2 px-4 border-b">{selection.game.name}</td>
+                  <td className="py-2 px-4 border-b">{selection.team}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {selections.length === 0 && (
+          <p className="text-center text-gray-500 mt-4">No selections yet</p>
+        )}
+      </div>
+    </div>
+  )
 }
