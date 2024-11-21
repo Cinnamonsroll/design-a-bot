@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import useLocalStorage from "@/app/hooks/useLocalStorage";
 import { gameData } from "@/app/constants";
 
-
 export default function Component() {
   const [selectedGame, setSelectedGame] = useLocalStorage<
     { year: number; name: string } | null
@@ -17,15 +16,17 @@ export default function Component() {
   const [availableGames, setAvailableGames] = useLocalStorage<
     { year: number; name: string }[]
   >("availableGames", [...gameData]);
+  const [availableTeams, setAvailableTeams] = useLocalStorage<number[]>(
+    "availableTeams",
+    Array.from({ length: 20 }, (_, i) => i + 1) // Default to 20 teams
+  );
   const [isSpinningGame, setIsSpinningGame] = useState(false);
   const [isSpinningTeam, setIsSpinningTeam] = useState(false);
+  const [spinningTeam, setSpinningTeam] = useState<number | null>(null); // NEW
   const [selections, setSelections] = useLocalStorage<
     Array<{ game: { year: number; name: string }; team: number }>
   >("selections", []);
-  const [totalTeams, setTotalTeams] = useLocalStorage<number>(
-    "totalTeams",
-    20
-  );
+  const [totalTeams, setTotalTeams] = useLocalStorage<number>("totalTeams", 20);
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
@@ -37,7 +38,10 @@ export default function Component() {
     if (availableGames.length === 0) {
       setAvailableGames([...gameData]);
     }
-  }, [hasMounted, availableGames.length, setAvailableGames]);
+    if (availableTeams.length === 0) {
+      setAvailableTeams(Array.from({ length: totalTeams }, (_, i) => i + 1));
+    }
+  }, [hasMounted, availableGames.length, availableTeams.length, totalTeams, setAvailableGames, setAvailableTeams]);
 
   const selectRandomGame = () => {
     if (availableGames.length === 0) return;
@@ -46,22 +50,39 @@ export default function Component() {
       const randomIndex = ~~(Math.random() * availableGames.length);
       const game = availableGames[randomIndex];
       setSelectedGame(game);
-      setAvailableGames(availableGames.filter((g: {year: number, name: string}) => g.year !== game.year));
+      setAvailableGames(availableGames.filter((g) => g.year !== game.year));
       setIsSpinningGame(false);
     }, 2000);
   };
 
   const selectRandomTeam = () => {
+    if (availableTeams.length === 0) return;
     setIsSpinningTeam(true);
+
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * availableTeams.length);
+      setSpinningTeam(availableTeams[randomIndex]);
+    }, 100);
+
     setTimeout(() => {
-      const randomTeam = ~~(Math.random() * totalTeams) + 1;
+      clearInterval(interval);
+      const randomIndex = Math.floor(Math.random() * availableTeams.length);
+      const team = availableTeams[randomIndex];
+      setAvailableTeams(availableTeams.filter((t) => t !== team));
       setIsSpinningTeam(false);
-      setSelectedTeam(randomTeam);
+      setSelectedTeam(team);
+      setSpinningTeam(team); // Ensure displayed number matches selected team
       if (selectedGame) {
-        setSelections([...selections, { game: selectedGame, team: randomTeam }]);
+        setSelections([...selections, { game: selectedGame, team }]);
       }
     }, 2000);
   };
+
+  useEffect(() => {
+    if (!isSpinningTeam) {
+      setSpinningTeam(null); // Clear spinning number when not spinning
+    }
+  }, [isSpinningTeam]);
 
   useEffect(() => {
     if (isSpinningGame) {
@@ -74,24 +95,15 @@ export default function Component() {
     }
   }, [isSpinningGame, availableGames]);
 
-  useEffect(() => {
-    if (isSpinningTeam) {
-      const interval = setInterval(() => {
-        setSelectedTeam(Math.floor(Math.random() * totalTeams) + 1);
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isSpinningTeam, totalTeams]);
-
   const handleTotalTeamsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     setTotalTeams(isNaN(value) || value < 1 ? 1 : value);
+    setAvailableTeams(Array.from({ length: isNaN(value) || value < 1 ? 1 : value }, (_, i) => i + 1));
   };
 
   if (!hasMounted) {
-    return null; 
+    return null;
   }
-
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-start p-4 relative text-black">
       <div className="absolute top-4 right-4 flex items-center gap-4">
@@ -156,13 +168,13 @@ export default function Component() {
           <div className="flex flex-col items-center justify-center mb-4">
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedTeam || 'empty'}
+                key={spinningTeam || selectedTeam || 'empty'}
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -50 }}
                 className="text-6xl font-bold text-green-500 mb-2"
               >
-                {selectedTeam || '????'}
+                {spinningTeam || selectedTeam || '????'}
               </motion.div>
             </AnimatePresence>
             <AnimatePresence mode="wait">
@@ -186,6 +198,7 @@ export default function Component() {
           </button>
         </div>
       </div>
+
 
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
         <h2 className="text-2xl font-semibold mb-4 text-center">Selected Games and Teams</h2>
